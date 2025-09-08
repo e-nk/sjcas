@@ -14,23 +14,48 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project setup
+1. Install Core Dependencies
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+		npm install prisma @prisma/client @types/node
 
-## Learn More
+2. Railway Database Setup
 
-To learn more about Next.js, take a look at the following resources:
+	#### Create Railway Account & Database
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+		Go to railway.app and sign up/login
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+		Click "New Project"
 
-## Deploy on Vercel
+		Select "Provision PostgreSQL" (not "Deploy from GitHub" - just the   	database)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+		Wait for the database to be created (takes about 30 seconds)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+		3.2: Get Your Database URL
+
+		Click on your PostgreSQL service in the Railway dashboard
+		Go to the "Connect" tab
+		Copy the "DATABASE_URL" (it will look something like: postgresql://postgres:password@server.railway.app:5432/railway)
+
+		3.3: Update Your Environment
+		Paste the DATABASE_URL into your .env.local file, replacing the placeholder:
+
+				DATABASE_URL="postgresql://postgres:your-actual-url-from-railway"
+
+		Also generate a secret key for NEXTAUTH_SECRET. You can use this command in your terminal:
+
+			openssl rand -base64 32
+
+3. Initialize Prisma
+
+		npx prisma init
+	This creates a prisma folder with a schema.prisma file.
+
+4. Test Database Connection
+
+		npx prisma db push
+
+5. Generate Prisma Client
+
+		npx prisma generate
