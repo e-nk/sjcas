@@ -8,7 +8,7 @@ import Hero from './Hero';
 const HomePage = () => {
   return (
     <>
-      <Hero />
+      {/* <Hero /> */}
 		
       {/* Additional sections will be added here */}
      
