@@ -13,11 +13,11 @@ const config: Config = {
         school: {
           // Primary colors
           primary: {
-            red: '#E62221',        // Primary Red
-            blue: '#0043B3',       // Primary Blue
-            white: '#ffffff',      // White
+            red: '#720026',        // Primary Red
+            blue: '#88ccf1',       // Primary Blue
+            white: '#FFFFFC',      // White
             black: '#000000',      // Black
-            lightBlue: '#bde0fe',  // Light Blue
+            lightBlue: '#97D2FB',  // Light Blue
           },
         },
       },
