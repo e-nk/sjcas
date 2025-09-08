@@ -2,6 +2,25 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@config "../../tailwind.config.ts";
+
+
+/* Font declarations for DidactGothic-Regular */
+@font-face {
+  font-family: 'Didact Gothic';
+  src: url('/fonts/DidactGothic-Regular/DidactGothic-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Base styles */
+@layer base {
+  body {
+    @apply font-garamond text-school-primary-black bg-school-primary-white;
+  }
+}
+
 
 @theme inline {
   --color-background: var(--background);
