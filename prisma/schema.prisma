@@ -1,15 +1,343 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model Student {
+  id                String   @id @default(cuid())
+  admissionNumber   String   @unique
+  firstName         String
+  lastName          String
+  middleName        String?
+  currentClassId    String
+  parentName        String
+  parentPhone       String
+  parentEmail       String?
+  dateOfBirth       DateTime?
+  status            StudentStatus @default(ACTIVE)
+  graduationYear    Int?     // Year when student graduated or left
+  currentAcademicYear Int   @default(2024) // Track which academic year they're in
+  feeGroupId        String?  // Which fee group they belong to
+  notes             String?  // For any special notes
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relationships
+  currentClass      Class @relation(fields: [currentClassId], references: [id])
+  feeGroup          FeeGroup? @relation(fields: [feeGroupId], references: [id])
+  payments          Payment[]
+  feeAssignments    FeeAssignment[]
+  credits           StudentCredit[]
+  ledger            StudentLedger[]
+  promotions        StudentPromotion[]
+  
+  @@map("students")
+}
+
+model Class {
+  id          String @id @default(cuid())
+  name        String // "Grade 1", "Form 4", etc.
+  level       Int    // 1, 2, 3, 4 for ordering/promotion
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationships
+  students    Student[]
+  feeStructures FeeStructure[]
+  promotionsFrom StudentPromotion[] @relation("PromotionsFrom")
+  promotionsTo   StudentPromotion[] @relation("PromotionsTo")
+  
+  @@map("classes")
+}
+
+model FeeGroup {
+  id          String @id @default(cuid())
+  name        String // "Day Scholar", "Boarder", "New Student", "Staff Child"
+  description String?
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationships
+  students      Student[]
+  feeStructures FeeStructure[]
+  
+  @@map("fee_groups")
+}
+
+model AcademicYear {
+  id          String @id @default(cuid())
+  year        Int @unique
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean @default(false) // Only one active at a time
+  isCurrent   Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("academic_years")
+}
+
+model FeeStructure {
+  id            String   @id @default(cuid())
+  name          String   // e.g., "Term 1 2024 - Day Scholar", "Term 2 2024 - Boarder"
+  amount        Decimal  @db.Decimal(10, 2)
+  term          String?  // "1", "2", "3" or null for annual
+  year          Int
+  dueDate       DateTime?
+  feeGroupId    String?  // Which fee group this applies to
+  classId       String?  // If fee is class-specific
+  applicableToAllClasses Boolean @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relationships
+  feeGroup      FeeGroup? @relation(fields: [feeGroupId], references: [id])
+  class         Class? @relation(fields: [classId], references: [id])
+  feeAssignments FeeAssignment[]
+  
+  @@map("fee_structures")
+}
+
+model FeeAssignment {
+  id               String       @id @default(cuid())
+  studentId        String
+  feeStructureId   String
+  amountDue        Decimal      @db.Decimal(10, 2)
+  amountPaid       Decimal      @default(0) @db.Decimal(10, 2)
+  balance          Decimal      @default(0) @db.Decimal(10, 2)
+  status           PaymentStatus @default(PENDING)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  
+  // Relationships
+  student          Student      @relation(fields: [studentId], references: [id])
+  feeStructure     FeeStructure @relation(fields: [feeStructureId], references: [id])
+  allocations      PaymentAllocation[]
+  
+  @@unique([studentId, feeStructureId])
+  @@map("fee_assignments")
+}
+
+model Payment {
+  id                   String        @id @default(cuid())
+  studentId            String?       
+  amount               Decimal       @db.Decimal(10, 2)
+  paymentMethod        PaymentMethod
+  transactionId        String
+  referenceNumber      String?
+  academicYear         Int?
+  term                 String?
+  status               PaymentStatus @default(PENDING)
+  paidAt               DateTime?
+  confirmedAt          DateTime?
+  receiptSent          Boolean       @default(false)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  
+  // Relationships
+  student              Student?      @relation(fields: [studentId], references: [id])
+  unmatchedPayment     UnmatchedPayment?
+  allocations          PaymentAllocation[]
+  
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id              String @id @default(cuid())
+  paymentId       String
+  feeAssignmentId String
+  allocatedAmount Decimal @db.Decimal(10, 2)
+  createdAt       DateTime @default(now())
+  
+  // Relationships
+  payment         Payment @relation(fields: [paymentId], references: [id])
+  feeAssignment   FeeAssignment @relation(fields: [feeAssignmentId], references: [id])
+  
+  @@map("payment_allocations")
+}
+
+model StudentPromotion {
+  id              String @id @default(cuid())
+  studentId       String
+  fromClassId     String?
+  toClassId       String
+  academicYear    Int
+  promotedAt      DateTime @default(now())
+  notes           String?
+  
+  // Relationships
+  student         Student @relation(fields: [studentId], references: [id])
+  fromClass       Class? @relation("PromotionsFrom", fields: [fromClassId], references: [id])
+  toClass         Class @relation("PromotionsTo", fields: [toClassId], references: [id])
+  
+  @@map("student_promotions")
+}
+
+model UnmatchedPayment {
+  id                   String        @id @default(cuid())
+  amount               Decimal       @db.Decimal(10, 2)
+  paymentMethod        PaymentMethod @default(MPESA)
+  transactionId        String        @unique
+  accountReference     String        // The invalid admission number used
+  phoneNumber          String?       // Payer's phone number from M-Pesa
+  payerName           String?       // Payer's name from M-Pesa
+  transactionDate     DateTime      // When the payment was made
+  status              UnmatchedPaymentStatus @default(PENDING)
+  adminNotes          String?       // Admin notes for resolution
+  resolvedById        String?       // Admin who resolved this
+  resolvedAt          DateTime?     // When it was resolved
+  createdPaymentId    String?    @unique   // ID of the payment created after resolution
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  // Relations
+  resolvedBy          User?         @relation(fields: [resolvedById], references: [id])
+  createdPayment      Payment?      @relation(fields: [createdPaymentId], references: [id])
+  
+  @@map("unmatched_payments")
+}
+
+model StudentCredit {
+  id              String   @id @default(cuid())
+  studentId       String   
+  amount          Decimal  @db.Decimal(10, 2)
+  source          String   // Description of where credit came from
+  usedAmount      Decimal  @default(0) @db.Decimal(10, 2)
+  remainingAmount Decimal  @db.Decimal(10, 2) // Available credit balance
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  student         Student  @relation(fields: [studentId], references: [id])
+  
+  @@map("student_credits")
+}
+
+model StudentLedger {
+  id              String   @id @default(cuid())
+  studentId       String
+  transactionType LedgerTransactionType
+  description     String   // Human readable description
+  referenceId     String?  // ID of related payment/fee assignment
+  amount          Decimal  @db.Decimal(10, 2) // Positive for payments, negative for fees
+  runningBalance  Decimal  @db.Decimal(10, 2) // Balance after this transaction
+  transactionDate DateTime @default(now())
+  academicYear    Int?     // Which academic year this relates to
+  term            String?  // Which term this relates to
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  student         Student  @relation(fields: [studentId], references: [id])
+  
+  @@map("student_ledger")
+  @@index([studentId, transactionDate])
+}
+
+// Authentication tables
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?   // For credentials login
+  role          UserRole  @default(ADMIN)
+  accounts      Account[]
+  sessions      Session[]
+  resolvedPayments UnmatchedPayment[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+// Enums
+enum StudentStatus {
+  ACTIVE      // Currently enrolled
+  GRADUATED   // Completed final grade
+  TRANSFERRED // Moved to another school
+  WITHDRAWN   // Left before graduation
+}
+
+enum UnmatchedPaymentStatus {
+  PENDING     // Waiting for admin review
+  RESOLVED    // Successfully matched to a student
+  REJECTED    // Marked as invalid/to be refunded
+}
+
+enum PaymentMethod {
+  MPESA
+  BANK_TRANSFER
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  CANCELLED
+}
+
+enum UserRole {
+  ADMIN
+  DIRECTOR
+  SUPER_ADMIN
+}
+
+enum LedgerTransactionType {
+  FEE_CHARGE      // New fee assigned (negative amount)
+  PAYMENT         // Payment received (positive amount)
+  CREDIT_APPLIED  // Credit used for fee payment (positive amount)
+  CREDIT_CREATED  // Overpayment credit created (positive amount)
+  ADJUSTMENT      // Manual adjustment by admin
 }
