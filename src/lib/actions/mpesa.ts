@@ -3,7 +3,6 @@
 import { db } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import axios from 'axios'
-import crypto from 'crypto'
 
 // M-Pesa Configuration - these should be in environment variables
 const MPESA_CONFIG = {
@@ -18,6 +17,7 @@ const MPESA_CONFIG = {
 // Get M-Pesa access token
 export async function getMpesaAccessToken() {
   try {
+    // Use Buffer (Node.js built-in) instead of crypto package
     const auth = Buffer.from(`${MPESA_CONFIG.consumerKey}:${MPESA_CONFIG.consumerSecret}`).toString('base64')
     
     const response = await axios.get(
@@ -41,6 +41,26 @@ export async function getMpesaAccessToken() {
       error: 'Failed to get M-Pesa access token'
     }
   }
+}
+
+// Generate M-Pesa password (if needed for STK Push)
+export function generateMpesaPassword(businessShortCode: string, passkey: string, timestamp: string) {
+  // Use Buffer instead of crypto package for base64 encoding
+  const password = Buffer.from(`${businessShortCode}${passkey}${timestamp}`).toString('base64')
+  return password
+}
+
+// Generate timestamp for M-Pesa
+export function generateTimestamp() {
+  const date = new Date()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  const second = String(date.getSeconds()).padStart(2, '0')
+  
+  return `${year}${month}${day}${hour}${minute}${second}`
 }
 
 // Register C2B URLs (do this once during setup)
@@ -80,7 +100,54 @@ export async function registerC2BUrls() {
   }
 }
 
-// Process M-Pesa payment callback
+// STK Push (Optional - for initiating payments from your system)
+export async function initiateStkPush(phoneNumber: string, amount: number, accountReference: string) {
+  try {
+    const tokenResult = await getMpesaAccessToken()
+    if (!tokenResult.success) {
+      throw new Error('Failed to get access token')
+    }
+
+    const timestamp = generateTimestamp()
+    const password = generateMpesaPassword(MPESA_CONFIG.paybill, MPESA_CONFIG.passkey, timestamp)
+
+    const response = await axios.post(
+      `https://${MPESA_CONFIG.environment === 'production' ? 'api' : 'sandbox'}.safaricom.co.ke/mpesa/stkpush/v1/processrequest`,
+      {
+        BusinessShortCode: MPESA_CONFIG.paybill,
+        Password: password,
+        Timestamp: timestamp,
+        TransactionType: 'CustomerPayBillOnline',
+        Amount: amount,
+        PartyA: phoneNumber,
+        PartyB: MPESA_CONFIG.paybill,
+        PhoneNumber: phoneNumber,
+        CallBackURL: `${MPESA_CONFIG.callbackUrl}/stkpush`,
+        AccountReference: accountReference,
+        TransactionDesc: `School fees payment for ${accountReference}`,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${tokenResult.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    return {
+      success: true,
+      data: response.data
+    }
+  } catch (error) {
+    console.error('Error initiating STK push:', error)
+    return {
+      success: false,
+      error: 'Failed to initiate STK push'
+    }
+  }
+}
+
+// Process M-Pesa payment callback (keep this function as is - it doesn't use crypto)
 export async function processMpesaCallback(callbackData: any) {
   try {
     console.log('Processing M-Pesa callback:', callbackData)
@@ -154,8 +221,6 @@ export async function processMpesaCallback(callbackData: any) {
       })
 
       console.log('Created unmatched payment:', unmatchedPayment.id)
-      
-      // TODO: Send notification to admin about unmatched payment
       
       return {
         success: true,
@@ -262,9 +327,6 @@ export async function processMpesaCallback(callbackData: any) {
 
     console.log(`M-Pesa payment processed successfully for ${student.firstName} ${student.lastName}`)
 
-    // TODO: Send SMS confirmation to parent
-    // TODO: Send email notification to school admin
-
     revalidatePath('/payments')
     revalidatePath(`/students/${student.id}`)
     revalidatePath('/fees/assignments')
@@ -286,7 +348,7 @@ export async function processMpesaCallback(callbackData: any) {
   }
 }
 
-// Helper function to update running balances
+// Helper function to update running balances (keep as is)
 async function updateStudentLedgerBalances(studentId: string) {
   const ledgerEntries = await db.studentLedger.findMany({
     where: { studentId },

@@ -5,6 +5,7 @@ import DataManagementCard from '@/components/settings/DataManagementCard'
 import { getSchoolSettings, getSystemStats } from '@/lib/actions/settings'
 import { Suspense } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
+import MpesaSetupInstructions from '@/components/mpesa/SetupInstructions'
 
 function SettingsLoading() {
   return (
@@ -82,6 +83,9 @@ export default function SettingsPage() {
         {/* Settings Content */}
         <Suspense fallback={<SettingsLoading />}>
           <SettingsContent />
+					<div className="lg:col-span-2">
+						<MpesaSetupInstructions />
+					</div>
         </Suspense>
       </div>
     </DashboardLayout>
