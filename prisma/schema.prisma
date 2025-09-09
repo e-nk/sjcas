@@ -38,6 +38,7 @@ model Student {
   ledger            StudentLedger[]
   promotions        StudentPromotion[]
 	stkPushRequests   StkPushRequest[]
+	notifications  Notification[]
   
   @@map("students")
 }
@@ -262,6 +263,26 @@ model StkPushRequest {
   student           Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   
   @@map("stk_push_requests")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  type        String   // PAYMENT_CONFIRMATION, FEE_REMINDER, ASSIGNMENT_NOTIFICATION, CUSTOM
+  studentId   String?
+  title       String
+  message     String
+  status      String   @default("PENDING") // PENDING, SENT, FAILED, DELIVERED
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  smsId       String?  // SMS service message ID
+  emailId     String?  // Email service message ID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  student     Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  @@map("notifications")
 }
 
 // Authentication tables

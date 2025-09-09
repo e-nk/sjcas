@@ -14,6 +14,7 @@ import {
   Settings,
   ChevronRight,
   X,
+	MessageCircle,
 } from 'lucide-react'
 
 const navigation = [
@@ -59,6 +60,15 @@ const navigation = [
       { name: 'Student Statements', href: '/reports/student-statements' },
     ],
   },
+	{
+		name: 'Communications',
+		icon: MessageCircle, // Import MessageCircle from lucide-react
+		children: [
+			{ name: 'Notifications', href: '/notifications' },
+			{ name: 'SMS History', href: '/notifications?tab=history' },
+			{ name: 'Email Templates', href: '/notifications?tab=templates' }, // Future feature
+		],
+	},
   {
     name: 'Settings',
     href: '/settings',
