@@ -47,6 +47,7 @@ const navigation = [
       { name: 'All Payments', href: '/payments' },
       { name: 'Record Payment', href: '/payments/record' },
       { name: 'Unmatched Payments', href: '/payments/unmatched' },
+			{ name: 'M-Pesa Testing', href: '/payments/mpesa-test' },
     ],
   },
   {

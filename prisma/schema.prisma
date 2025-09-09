@@ -37,6 +37,7 @@ model Student {
   credits           StudentCredit[]
   ledger            StudentLedger[]
   promotions        StudentPromotion[]
+	stkPushRequests   StkPushRequest[]
   
   @@map("students")
 }
@@ -242,6 +243,23 @@ model StudentLedger {
   
   @@map("student_ledger")
   @@index([studentId, transactionDate])
+}
+
+model StkPushRequest {
+  id                String   @id @default(cuid())
+  checkoutRequestId String   @unique
+  merchantRequestId String?
+  studentId         String
+  phoneNumber       String
+  amount            Float
+  status            String   @default("PENDING") // PENDING, COMPLETED, FAILED, EXPIRED
+  createdAt         DateTime @default(now())
+  expiresAt         DateTime
+  
+  // Relations
+  student           Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  @@map("stk_push_requests")
 }
 
 // Authentication tables
