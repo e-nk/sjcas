@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import MainLayout from '@/components/layouts/MainLayout'
+import SessionProvider from '@/components/providers/SessionProvider'
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ST. JOSEPH’S CENTRAL ACADEMY - SIRONOI",
-  description: "A GOOD ACADEMIC FOUNDATION FOR A BRIGHTER FUTURE",
+  title: "ST. JOSEPH'S CENTRAL ACADEMY - SIRONOI",
+  description: "Fee Management System",
 };
 
 export default function RootLayout({
@@ -15,9 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-garamond antialiased">
-        <MainLayout>
-            {children}
-         </MainLayout>
+        <SessionProvider>
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );
