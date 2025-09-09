@@ -279,7 +279,7 @@ export default function SendNotificationForm({ students, classes }: SendNotifica
                       ? 'border-blue-500 bg-blue-50' 
                       : 'border-gray-200 hover:bg-gray-50'
                   }`}
-                  onClick={() => handleClassToggle(cls.id)}
+                  // onClick={() => handleClassToggle(cls.id)}
                 >
                   <Checkbox 
                     checked={selectedClasses.includes(cls.id)}
