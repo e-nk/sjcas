@@ -43,7 +43,7 @@ model Student {
 
 model Class {
   id          String @id @default(cuid())
-  name        String // "Grade 1", "Form 4", etc.
+  name        String @unique  // Add @unique here
   level       Int    // 1, 2, 3, 4 for ordering/promotion
   isActive    Boolean @default(true)
   createdAt   DateTime @default(now())
@@ -60,7 +60,7 @@ model Class {
 
 model FeeGroup {
   id          String @id @default(cuid())
-  name        String // "Day Scholar", "Boarder", "New Student", "Staff Child"
+  name        String @unique  // Add @unique here
   description String?
   isActive    Boolean @default(true)
   createdAt   DateTime @default(now())
