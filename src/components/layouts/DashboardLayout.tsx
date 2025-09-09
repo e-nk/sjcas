@@ -14,6 +14,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false) // Mobile only
 
   useEffect(() => {
     setMounted(true)
@@ -44,11 +45,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardHeader />
+      <DashboardHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       <div className="flex">
-        <DashboardSidebar />
-        <main className="flex-1 p-6">
-          {children}
+        <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <main className="flex-1 lg:ml-64">
+          <div className="p-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>
