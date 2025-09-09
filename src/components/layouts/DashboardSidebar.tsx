@@ -28,7 +28,7 @@ const navigation = [
     children: [
       { name: 'All Students', href: '/students' },
       { name: 'Add Student', href: '/students/add' },
-      { name: 'Promote Students', href: '/students/promote' },
+      { name: 'Promote Students', href: '/students/promotions' },
     ],
   },
   {

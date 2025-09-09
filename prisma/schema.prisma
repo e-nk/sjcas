@@ -53,8 +53,8 @@ model Class {
   // Relationships
   students    Student[]
   feeStructures FeeStructure[]
-  promotionsFrom StudentPromotion[] @relation("PromotionsFrom")
-  promotionsTo   StudentPromotion[] @relation("PromotionsTo")
+  promotionsFrom StudentPromotion[] @relation("PromotionFromClass")
+  promotionsTo   StudentPromotion[] @relation("PromotionToClass")
   
   @@map("classes")
 }
@@ -168,18 +168,20 @@ model PaymentAllocation {
 }
 
 model StudentPromotion {
-  id              String @id @default(cuid())
-  studentId       String
-  fromClassId     String?
-  toClassId       String
-  academicYear    Int
-  promotedAt      DateTime @default(now())
-  notes           String?
+  id             String   @id @default(cuid())
+  studentId      String
+  fromClassId    String
+  toClassId      String?  // null for graduations
+  academicYear   Int
+  promotionDate  DateTime @default(now())
+  promotionType  String   @default("PROMOTION") // PROMOTION, GRADUATION, REVERSAL
+  notes          String?
+  createdAt      DateTime @default(now())
   
-  // Relationships
-  student         Student @relation(fields: [studentId], references: [id])
-  fromClass       Class? @relation("PromotionsFrom", fields: [fromClassId], references: [id])
-  toClass         Class @relation("PromotionsTo", fields: [toClassId], references: [id])
+  // Relations
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  fromClass      Class    @relation("PromotionFromClass", fields: [fromClassId], references: [id])
+  toClass        Class?   @relation("PromotionToClass", fields: [toClassId], references: [id])
   
   @@map("student_promotions")
 }
