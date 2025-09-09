@@ -3,101 +3,76 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Download, Printer, Search, AlertCircle, Users, DollarSign } from 'lucide-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Download, Printer, Search, AlertCircle, DollarSign, Users, TrendingDown } from 'lucide-react'
+import { OutstandingFeesData } from '@/lib/actions/reports'
 
 interface OutstandingFeesReportProps {
-  data: {
-    reportByClass: Array<{
-      className: string
-      students: Array<{
-        studentId: string
-        studentName: string
-        admissionNumber: string
-        parentName: string
-        parentPhone: string
-        feeGroup: string
-        assignments: Array<{
-          feeStructureName: string
-          term: string | null
-          year: number
-          amountDue: number
-          amountPaid: number
-          balance: number
-        }>
-        totalOutstanding: number
-      }>
-      totalOutstanding: number
-      studentCount: number
-    }>
-    overallStats: {
-      totalStudents: number
-      totalOutstanding: number
-      totalClasses: number
-    }
-  }
+  data: OutstandingFeesData
 }
 
 export default function OutstandingFeesReport({ data }: OutstandingFeesReportProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedClass, setSelectedClass] = useState('ALL')
-  const [minAmount, setMinAmount] = useState('')
-	const [exportLoading, setExportLoading] = useState(false)
-	const [printLoading, setPrintLoading] = useState(false)
-
-  const { reportByClass, overallStats } = data
+  const [selectedClass, setSelectedClass] = useState('all')
+  const [printLoading, setPrintLoading] = useState(false)
+  const [exportLoading, setExportLoading] = useState(false)
 
   const handlePrint = () => {
-		setPrintLoading(true)
-		setTimeout(() => {
-			window.print()
-			setPrintLoading(false)
-		}, 500)
-	}
+    setPrintLoading(true)
+    setTimeout(() => {
+      window.print()
+      setPrintLoading(false)
+    }, 500)
+  }
 
   const handleDownload = async () => {
-		setExportLoading(true)
-		try {
-			await new Promise(resolve => setTimeout(resolve, 2000))
-			alert('Excel export functionality will be implemented soon')
-		} finally {
-			setExportLoading(false)
-		}
-	}
-
-  // Filter classes based on search
-  const filteredReport = reportByClass.filter(classData => {
-    if (selectedClass !== 'ALL' && classData.className !== selectedClass) {
-      return false
+    setExportLoading(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      alert('Excel export functionality will be implemented soon')
+    } finally {
+      setExportLoading(false)
     }
+  }
 
-    // Filter students within class
-    classData.students = classData.students.filter(student => {
-      const matchesSearch = searchTerm === '' || 
-        student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.parentName.toLowerCase().includes(searchTerm.toLowerCase())
-
-      const matchesAmount = minAmount === '' || 
-        student.totalOutstanding >= parseFloat(minAmount)
-
-      return matchesSearch && matchesAmount
-    })
-
-    // Recalculate class totals after filtering
-    classData.totalOutstanding = classData.students.reduce((sum, student) => sum + student.totalOutstanding, 0)
-    classData.studentCount = classData.students.length
-
-    return classData.students.length > 0
+  // Filter students based on search and class
+  const filteredStudents = data.students.filter(student => {
+    const matchesSearch = searchTerm === '' || 
+      `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesClass = selectedClass === 'all' || student.currentClass.name === selectedClass
+    
+    return matchesSearch && matchesClass
   })
 
-  // Recalculate overall stats after filtering
-  const filteredStats = {
-    totalStudents: filteredReport.reduce((sum, cls) => sum + cls.studentCount, 0),
-    totalOutstanding: filteredReport.reduce((sum, cls) => sum + cls.totalOutstanding, 0),
-    totalClasses: filteredReport.length
+  // Filter class data based on selected class
+  const filteredClassData = selectedClass === 'all' 
+    ? data.byClass 
+    : data.byClass.filter(classData => classData.className === selectedClass)
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>
+      case 'GRADUATED':
+        return <Badge className="bg-blue-100 text-blue-800">Graduated</Badge>
+      case 'TRANSFERRED':
+        return <Badge className="bg-yellow-100 text-yellow-800">Transferred</Badge>
+      case 'WITHDRAWN':
+        return <Badge className="bg-red-100 text-red-800">Withdrawn</Badge>
+      default:
+        return <Badge variant="secondary">{status}</Badge>
+    }
   }
 
   return (
@@ -109,139 +84,34 @@ export default function OutstandingFeesReport({ data }: OutstandingFeesReportPro
           <p className="text-gray-600">Students with unpaid fee balances</p>
         </div>
         <div className="flex gap-2">
-					<Button variant="outline" onClick={handleDownload} disabled={exportLoading}>
-						{exportLoading ? (
-							<>
-								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-								Exporting...
-							</>
-						) : (
-							<>
-								<Download className="h-4 w-4 mr-2" />
-								Export Excel
-							</>
-						)}
-					</Button>
-					<Button variant="outline" onClick={handlePrint} disabled={printLoading}>
-						{printLoading ? (
-							<>
-								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-								Preparing...
-							</>
-						) : (
-							<>
-								<Printer className="h-4 w-4 mr-2" />
-								Print Report
-							</>
-						)}
-					</Button>
-				</div>
-      </div>
-
-      {/* Filters */}
-      <Card className="print:hidden">
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search students..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-            >
-              <option value="ALL">All Classes</option>
-              {reportByClass.map((cls) => (
-                <option key={cls.className} value={cls.className}>
-                  {cls.className}
-                </option>
-              ))}
-            </select>
-
-            <Input
-              placeholder="Min amount (KES)"
-              value={minAmount}
-              onChange={(e) => setMinAmount(e.target.value)}
-              type="number"
-              min="0"
-            />
-
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setSearchTerm('')
-                setSelectedClass('ALL')
-                setMinAmount('')
-              }}
-            >
-              Clear Filters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Overall Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-red-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Students with Outstanding Fees</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {filteredStats.totalStudents}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Across {filteredStats.totalClasses} classes
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-red-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Outstanding Amount</p>
-                <p className="text-2xl font-bold text-red-600">
-                  KES {filteredStats.totalOutstanding.toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Average: KES {filteredStats.totalStudents > 0 ? Math.round(filteredStats.totalOutstanding / filteredStats.totalStudents).toLocaleString() : 0} per student
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <AlertCircle className="h-8 w-8 text-orange-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">High Outstanding ({'>'}50K)</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {filteredReport.reduce((count, cls) => 
-                    count + cls.students.filter(s => s.totalOutstanding > 50000).length, 0
-                  )}
-                </p>
-                <p className="text-xs text-gray-500">Requiring urgent attention</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <Button variant="outline" onClick={handleDownload} disabled={exportLoading}>
+            {exportLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Export Excel
+              </>
+            )}
+          </Button>
+          
+          <Button variant="outline" onClick={handlePrint} disabled={printLoading}>
+            {printLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                Preparing...
+              </>
+            ) : (
+              <>
+                <Printer className="h-4 w-4 mr-2" />
+                Print Report
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Report Header (for print) */}
@@ -264,124 +134,207 @@ export default function OutstandingFeesReport({ data }: OutstandingFeesReportPro
         </CardHeader>
       </Card>
 
-      {/* Class-wise Report */}
-      {filteredReport.map((classData) => (
-        <Card key={classData.className}>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg">
-                {classData.className}
-              </CardTitle>
-              <div className="text-right">
-                <Badge variant="outline" className="mr-2">
-                  {classData.studentCount} students
-                </Badge>
-                <Badge className="bg-red-100 text-red-800">
-                  KES {classData.totalOutstanding.toLocaleString()}
-                </Badge>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Parent/Guardian</TableHead>
-                  <TableHead>Fee Group</TableHead>
-                  <TableHead>Outstanding Fees</TableHead>
-                  <TableHead className="text-right">Total Outstanding</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {classData.students.map((student) => (
-                  <TableRow key={student.studentId}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{student.studentName}</p>
-                        <p className="text-sm text-gray-500 font-mono">
-                          {student.admissionNumber}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="text-sm">{student.parentName}</p>
-                        <p className="text-xs text-gray-500">{student.parentPhone}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {student.feeGroup}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {student.assignments.map((assignment, idx) => (
-                          <div key={idx} className="text-xs">
-                            <span className="font-medium">{assignment.feeStructureName}</span>
-                            <span className="text-gray-500 ml-1">
-                              ({assignment.term ? `Term ${assignment.term} ` : ''}{assignment.year})
-                            </span>
-                            <span className="text-red-600 ml-1">
-                              - KES {assignment.balance.toLocaleString()}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <p className="font-bold text-red-600 text-lg">
-                        KES {student.totalOutstanding.toLocaleString()}
-                      </p>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            
-            {/* Class Summary */}
-            <div className="mt-4 pt-4 border-t">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Class Total:</span>
-                <span className="font-bold text-red-600 text-lg">
-                  KES {classData.totalOutstanding.toLocaleString()}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-
-      {filteredReport.length === 0 && (
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
-          <CardContent className="text-center py-12">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Outstanding Fees Found</h3>
-            <p className="text-gray-500">
-              {searchTerm || selectedClass !== 'ALL' || minAmount
-                ? 'Try adjusting your filters to see more results.'
-                : 'All students have paid their fees in full!'}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Grand Total */}
-      {filteredReport.length > 0 && (
-        <Card className="border-red-200">
           <CardContent className="p-6">
-            <div className="flex justify-between items-center text-lg">
-              <span className="font-medium">
-                Grand Total Outstanding ({filteredStats.totalStudents} students):
-              </span>
-              <span className="font-bold text-red-600 text-2xl">
-                KES {filteredStats.totalOutstanding.toLocaleString()}
-              </span>
+            <div className="flex items-center">
+              <AlertCircle className="h-8 w-8 text-red-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Students with Outstanding Fees</p>
+                <p className="text-2xl font-bold text-red-600">{data.summary.totalStudents}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
-      )}
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <DollarSign className="h-8 w-8 text-orange-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Outstanding Amount</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  KES {data.summary.totalOutstandingAmount.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <TrendingDown className="h-8 w-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Average Outstanding</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  KES {Math.round(data.summary.averageOutstanding).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Class Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Outstanding Fees by Class</CardTitle>
+          <CardDescription>Summary of outstanding balances grouped by class</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Class</TableHead>
+                <TableHead className="text-right">Students with Outstanding</TableHead>
+                <TableHead className="text-right">Total Outstanding</TableHead>
+                <TableHead className="text-right">Average per Student</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.byClass.map((classData) => (
+                <TableRow key={classData.className}>
+                  <TableCell className="font-medium">{classData.className}</TableCell>
+                  <TableCell className="text-right">{classData.studentCount}</TableCell>
+                  <TableCell className="text-right font-mono text-red-600 font-bold">
+                    KES {classData.totalOutstanding.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    KES {Math.round(classData.totalOutstanding / classData.studentCount).toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Filters */}
+      <Card className="print:hidden">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search by student name or admission number..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm min-w-[150px]"
+            >
+              <option value="all">All Classes</option>
+              {data.byClass.map((classData) => (
+                <option key={classData.className} value={classData.className}>
+                  {classData.className}
+                </option>
+              ))}
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Detailed Student List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Detailed Outstanding Fees List</CardTitle>
+          <CardDescription>
+            Showing {filteredStudents.length} of {data.students.length} students with outstanding balances
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student</TableHead>
+                <TableHead>Class</TableHead>
+                <TableHead>Fee Group</TableHead>
+                <TableHead className="text-right">Outstanding Balance</TableHead>
+                <TableHead>Recent Payment</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStudents.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="text-gray-500">
+                      <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                      <p className="font-medium">No students found</p>
+                      <p className="text-sm">
+                        {searchTerm || selectedClass !== 'all' 
+                          ? 'Try adjusting your search or filter criteria' 
+                          : 'All students have paid their fees!'
+                        }
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredStudents.map((student) => {
+                  const totalOutstanding = student.feeAssignments.reduce((sum: number, assignment: any) => {
+                    return sum + parseFloat(assignment.balance.toString())
+                  }, 0)
+
+                  return (
+                    <TableRow key={student.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">
+                            {student.firstName} {student.lastName}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {student.admissionNumber}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{student.currentClass.name}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {student.feeGroup ? (
+                          <Badge variant="secondary">{student.feeGroup.name}</Badge>
+                        ) : (
+                          <span className="text-gray-400 text-sm">No group</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-bold text-red-600">
+                        KES {totalOutstanding.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        {student.payments && student.payments.length > 0 ? (
+                          <div className="text-sm">
+                            <p className="font-mono text-green-600">
+                              KES {parseFloat(student.payments[0].amount.toString()).toLocaleString()}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {student.payments[0].paidAt ? new Date(student.payments[0].paidAt).toLocaleDateString() : 'No date'}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {student.payments[0].paymentMethod === 'MPESA' ? 'M-Pesa' : student.payments[0].paymentMethod}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">No payments</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(student.status)}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Footer for print */}
       <div className="text-center text-sm text-gray-500 print:block hidden">

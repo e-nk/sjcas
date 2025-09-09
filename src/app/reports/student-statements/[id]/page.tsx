@@ -7,11 +7,12 @@ import { ArrowLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
 
 interface StudentStatementPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }> // Changed this line
 }
 
 export default async function StudentStatementPage({ params }: StudentStatementPageProps) {
-  const data = await getStudentStatement(params.id)
+  const { id } = await params // Added await here
+  const data = await getStudentStatement(id) // Use id instead of params.id
 
   if (!data) {
     notFound()
@@ -25,15 +26,15 @@ export default async function StudentStatementPage({ params }: StudentStatementP
           <Link href="/reports/student-statements">
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Student Statements
+              Back to Students
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Fee Statement - {data.student.firstName} {data.student.lastName}
+            <h1 className="text-2xl font-bold text-gray-900">
+              Student Fee Statement
             </h1>
-            <p className="text-gray-600 mt-1">
-              {data.student.admissionNumber} • {data.student.currentClass.name}
+            <p className="text-gray-600">
+              {data.student.firstName} {data.student.lastName} • {data.student.admissionNumber}
             </p>
           </div>
         </div>
