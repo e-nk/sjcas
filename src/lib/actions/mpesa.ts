@@ -44,14 +44,14 @@ export async function getMpesaAccessToken() {
 }
 
 // Generate M-Pesa password (if needed for STK Push)
-export function generateMpesaPassword(businessShortCode: string, passkey: string, timestamp: string) {
+export async function generateMpesaPassword(businessShortCode: string, passkey: string, timestamp: string) {
   // Use Buffer instead of crypto package for base64 encoding
   const password = Buffer.from(`${businessShortCode}${passkey}${timestamp}`).toString('base64')
   return password
 }
 
 // Generate timestamp for M-Pesa
-export function generateTimestamp() {
+export async function generateTimestamp() {
   const date = new Date()
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -108,8 +108,8 @@ export async function initiateStkPush(phoneNumber: string, amount: number, accou
       throw new Error('Failed to get access token')
     }
 
-    const timestamp = generateTimestamp()
-    const password = generateMpesaPassword(MPESA_CONFIG.paybill, MPESA_CONFIG.passkey, timestamp)
+    const timestamp = await generateTimestamp()
+    const password = await generateMpesaPassword(MPESA_CONFIG.paybill, MPESA_CONFIG.passkey, timestamp);
 
     const response = await axios.post(
       `https://${MPESA_CONFIG.environment === 'production' ? 'api' : 'sandbox'}.safaricom.co.ke/mpesa/stkpush/v1/processrequest`,
