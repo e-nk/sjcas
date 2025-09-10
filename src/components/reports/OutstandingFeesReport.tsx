@@ -15,6 +15,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Download, Printer, Search, AlertCircle, DollarSign, Users, TrendingDown } from 'lucide-react'
 import { OutstandingFeesData } from '@/lib/actions/reports'
+import { exportToPDF, exportToExcel } from '@/lib/utils/exports'
+
 
 interface OutstandingFeesReportProps {
   data: OutstandingFeesData
@@ -35,14 +37,28 @@ export default function OutstandingFeesReport({ data }: OutstandingFeesReportPro
   }
 
   const handleDownload = async () => {
-    setExportLoading(true)
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      alert('Excel export functionality will be implemented soon')
-    } finally {
-      setExportLoading(false)
-    }
-  }
+		setExportLoading(true)
+		try {
+			const result = await exportToExcel.outstandingFees(data.students)
+			if (!result.success) {
+				alert('Failed to export Excel: ' + result.error)
+			}
+		} finally {
+			setExportLoading(false)
+		}
+	}
+
+	const handlePDFDownload = async () => {
+		setExportLoading(true)
+		try {
+			const result = await exportToPDF.outstandingReport(data.students)
+			if (!result.success) {
+				alert('Failed to export PDF: ' + result.error)
+			}
+		} finally {
+			setExportLoading(false)
+		}
+	}
 
   // Filter students based on search and class
   const filteredStudents = data.students.filter(student => {
@@ -84,34 +100,48 @@ export default function OutstandingFeesReport({ data }: OutstandingFeesReportPro
           <p className="text-gray-600">Students with unpaid fee balances</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleDownload} disabled={exportLoading}>
-            {exportLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-                Exporting...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                Export Excel
-              </>
-            )}
-          </Button>
-          
-          <Button variant="outline" onClick={handlePrint} disabled={printLoading}>
-            {printLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-                Preparing...
-              </>
-            ) : (
-              <>
-                <Printer className="h-4 w-4 mr-2" />
-                Print Report
-              </>
-            )}
-          </Button>
-        </div>
+					<Button variant="outline" onClick={handleDownload} disabled={exportLoading}>
+						{exportLoading ? (
+							<>
+								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+								Exporting...
+							</>
+						) : (
+							<>
+								<Download className="h-4 w-4 mr-2" />
+								Export Excel
+							</>
+						)}
+					</Button>
+					
+					<Button variant="outline" onClick={handlePDFDownload} disabled={exportLoading}>
+						{exportLoading ? (
+							<>
+								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+								Generating...
+							</>
+						) : (
+							<>
+								<Download className="h-4 w-4 mr-2" />
+								Download PDF
+							</>
+						)}
+					</Button>
+					
+					<Button variant="outline" onClick={handlePrint} disabled={printLoading}>
+						{printLoading ? (
+							<>
+								<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+								Preparing...
+							</>
+						) : (
+							<>
+								<Printer className="h-4 w-4 mr-2" />
+								Print Report
+							</>
+						)}
+					</Button>
+				</div>
       </div>
 
       {/* Report Header (for print) */}

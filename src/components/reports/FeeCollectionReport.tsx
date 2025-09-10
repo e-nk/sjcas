@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Download, Printer, DollarSign, TrendingUp, Calendar, CreditCard, BarChart3 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts'
 
+import { exportToPDF, exportToExcel } from '@/lib/utils/exports'
+
 interface FeeCollectionReportProps {
   data: {
     payments: any[]
@@ -53,6 +55,42 @@ export default function FeeCollectionReport({ data }: FeeCollectionReportProps) 
     }, 500)
   }
 
+	const handleExcelExport = async () => {
+		setExportLoading(true)
+		try {
+			const result = await exportToExcel.payments(data.payments)
+			if (!result.success) {
+				alert('Failed to export Excel: ' + result.error)
+			}
+		} catch (error) {
+			console.error('Excel export failed:', error)
+			alert('Failed to export Excel file')
+		} finally {
+			setExportLoading(false)
+		}
+	}
+
+	const handlePDFExport = async () => {
+		setExportLoading(true)
+		try {
+			const result = await exportToPDF.feeCollectionReport(data.payments, {
+				totalPayments: data.payments.length,
+				totalAmount: data.payments.reduce((sum, payment) => sum + parseFloat(payment.amount.toString()), 0),
+				averagePayment: data.payments.length > 0 
+					? data.payments.reduce((sum, payment) => sum + parseFloat(payment.amount.toString()), 0) / data.payments.length 
+					: 0
+			})
+			if (!result.success) {
+				alert('Failed to export PDF: ' + result.error)
+			}
+		} catch (error) {
+			console.error('PDF export failed:', error)
+			alert('Failed to export PDF file')
+		} finally {
+			setExportLoading(false)
+		}
+	}
+
   const handleExport = async () => {
     setExportLoading(true)
     try {
@@ -83,49 +121,46 @@ export default function FeeCollectionReport({ data }: FeeCollectionReportProps) 
       {/* Header Actions */}
       <div className="flex justify-between items-center print:hidden">
         <div>
-          <h2 className="text-2xl font-bold">Fee Collection Report</h2>
-          <p className="text-gray-600">Payment collection analysis and trends</p>
-        </div>
-        <div className="flex gap-2">
-          <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-          >
-            <option value="7">Last 7 Days</option>
-            <option value="30">Last 30 Days</option>
-            <option value="90">Last 90 Days</option>
-            <option value="365">Last Year</option>
-          </select>
-          
-          <Button variant="outline" onClick={handleExport} disabled={exportLoading}>
-            {exportLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-                Exporting...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                Export Excel
-              </>
-            )}
-          </Button>
-          
-          <Button variant="outline" onClick={handlePrint} disabled={printLoading}>
-            {printLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-                Preparing...
-              </>
-            ) : (
-              <>
-                <Printer className="h-4 w-4 mr-2" />
-                Print Report
-              </>
-            )}
-          </Button>
-        </div>
+      <CardTitle>Fee Collection Report</CardTitle>
+      <CardDescription>
+        Complete record of all fee payments received
+      </CardDescription>
+    </div>
+    
+    <div className="flex gap-2 print:hidden">
+      <Button variant="outline" onClick={handleExcelExport} disabled={exportLoading}>
+        {exportLoading ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+            Exporting...
+          </>
+        ) : (
+          <>
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
+          </>
+        )}
+      </Button>
+      
+      <Button variant="outline" onClick={handlePDFExport} disabled={exportLoading}>
+        {exportLoading ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+            Generating...
+          </>
+        ) : (
+          <>
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </>
+        )}
+      </Button>
+      
+      <Button variant="outline" onClick={handlePrint}>
+        <Printer className="h-4 w-4 mr-2" />
+        Print Report
+      </Button>
+    </div>
       </div>
 
       {/* Report Header (for print) */}

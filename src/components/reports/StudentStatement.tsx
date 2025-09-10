@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Download, Printer, Mail } from 'lucide-react'
 import Image from 'next/image'
+import { exportToPDF } from '@/lib/utils/exports'
+
 
 interface StudentStatementProps {
   data: {
@@ -35,19 +37,26 @@ export default function StudentStatement({ data }: StudentStatementProps) {
     }, 500)
   }
 
-  const handleDownload = async () => {
-    setIsLoading(true)
-    try {
-      // TODO: Implement PDF generation
-      await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate API call
-      console.log('PDF download would happen here')
-      alert('PDF download functionality will be implemented soon')
-    } catch (error) {
-      console.error('Download failed:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+	const handleDownload = async () => {
+		setIsLoading(true)
+		try {
+			const result = await exportToPDF.studentStatement(
+				'student-statement-content',
+				`${student.firstName}_${student.lastName}`
+			)
+			
+			if (result.success) {
+				console.log('PDF downloaded successfully')
+			} else {
+				alert('Failed to download PDF: ' + result.error)
+			}
+		} catch (error) {
+			console.error('Download failed:', error)
+			alert('Failed to download PDF')
+		} finally {
+			setIsLoading(false)
+		}
+	}
 
   const handleEmail = async () => {
     setEmailLoading(true)
@@ -67,51 +76,51 @@ export default function StudentStatement({ data }: StudentStatementProps) {
     <div className="space-y-6">
       {/* Header Actions */}
       <div className="flex justify-end gap-2 print:hidden">
-        <Button variant="outline" onClick={handleEmail} disabled={emailLoading}>
-          {emailLoading ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-              Sending...
-            </>
-          ) : (
-            <>
-              <Mail className="h-4 w-4 mr-2" />
-              Email Statement
-            </>
-          )}
-        </Button>
-        <Button variant="outline" onClick={handleDownload} disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-              Generating...
-            </>
-          ) : (
-            <>
-              <Download className="h-4 w-4 mr-2" />
-              Download PDF
-            </>
-          )}
-        </Button>
-        <Button variant="outline" onClick={handlePrint} disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-              Preparing...
-            </>
-          ) : (
-            <>
-              <Printer className="h-4 w-4 mr-2" />
-              Print
-            </>
-          )}
-        </Button>
-      </div>
+				<Button variant="outline" onClick={handleEmail} disabled={emailLoading}>
+					{emailLoading ? (
+						<>
+							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+							Sending...
+						</>
+					) : (
+						<>
+							<Mail className="h-4 w-4 mr-2" />
+							Email Statement
+						</>
+					)}
+				</Button>
+				<Button variant="outline" onClick={handleDownload} disabled={isLoading}>
+					{isLoading ? (
+						<>
+							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+							Generating...
+						</>
+					) : (
+						<>
+							<Download className="h-4 w-4 mr-2" />
+							Download PDF
+						</>
+					)}
+				</Button>
+				<Button variant="outline" onClick={handlePrint} disabled={isLoading}>
+					{isLoading ? (
+						<>
+							<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+							Preparing...
+						</>
+					) : (
+						<>
+							<Printer className="h-4 w-4 mr-2" />
+							Print
+						</>
+					)}
+				</Button>
+			</div>
 
       {/* Statement Header */}
       <Card>
         <CardHeader className="text-center border-b">
-          <div className="space-y-4">
+          <div id="student-statement-content" className="space-y-4">
             {/* School Logo */}
             <div className="flex justify-center">
               <Image

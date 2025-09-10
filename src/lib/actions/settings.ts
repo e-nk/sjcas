@@ -189,27 +189,103 @@ export async function getSystemStats() {
   }
 }
 
+// Replace the existing exportData function
 export async function exportData(dataType: 'students' | 'payments' | 'all') {
   try {
-    // Simulate export process
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    console.log(`Starting ${dataType} data export...`)
     
-    console.log(`Exporting ${dataType} data...`)
-    
-    return {
-      success: true,
-      message: `${dataType} data exported successfully!`,
-      downloadUrl: '#' // In real implementation, this would be a file download URL
+    if (dataType === 'students' || dataType === 'all') {
+      const students = await db.student.findMany({
+        include: {
+          currentClass: true,
+          feeGroup: true,
+          feeAssignments: {
+            include: { feeStructure: true }
+          },
+          payments: {
+            where: { status: 'CONFIRMED' },
+            orderBy: { paidAt: 'desc' },
+            take: 5
+          }
+        }
+      })
+
+      // Return data that can be used by client-side export
+      return {
+        success: true,
+        message: `${dataType} data prepared for export`,
+        data: {
+          students: students.map(student => ({
+            'First Name': student.firstName,
+            'Middle Name': student.middleName || '',
+            'Last Name': student.lastName,
+            'Admission Number': student.admissionNumber,
+            'Class': student.currentClass?.name || 'N/A',
+            'Fee Group': student.feeGroup?.name || 'N/A',
+            'Parent Name': student.parentName,
+            'Parent Phone': student.parentPhone,
+            'Parent Email': student.parentEmail || '',
+            'Date of Birth': student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : '',
+            'Status': student.status,
+            'Academic Year': student.currentAcademicYear,
+            'Outstanding Balance': student.feeAssignments.reduce((sum, assignment) => 
+              sum + parseFloat(assignment.balance.toString()), 0
+            ),
+            'Total Payments': student.payments.reduce((sum, payment) => 
+              sum + parseFloat(payment.amount.toString()), 0
+            ),
+            'Created Date': new Date(student.createdAt).toLocaleDateString()
+          }))
+        },
+        type: 'students'
+      }
     }
-  } catch (error) {
-    console.error('Error exporting data:', error)
+
+    if (dataType === 'payments' || dataType === 'all') {
+      const payments = await db.payment.findMany({
+        where: { status: 'CONFIRMED' },
+        include: {
+          student: {
+            include: { currentClass: true }
+          }
+        },
+        orderBy: { paidAt: 'desc' }
+      })
+
+      return {
+        success: true,
+        message: `${dataType} data prepared for export`,
+        data: {
+          payments: payments.map(payment => ({
+            'Payment Date': payment.paidAt ? new Date(payment.paidAt).toLocaleDateString() : 'N/A',
+            'Student Name': payment.student ? `${payment.student.firstName} ${payment.student.lastName}` : 'Unknown',
+            'Admission Number': payment.student?.admissionNumber || 'N/A',
+            'Class': payment.student?.currentClass?.name || 'N/A',
+            'Amount': parseFloat(payment.amount.toString()),
+            'Payment Method': payment.paymentMethod === 'MPESA' ? 'M-Pesa' : payment.paymentMethod,
+            'Transaction ID': payment.transactionId,
+            'Reference Number': payment.referenceNumber || '',
+            'Status': payment.status,
+            'Confirmed Date': payment.confirmedAt ? new Date(payment.confirmedAt).toLocaleDateString() : 'N/A',
+            'Created Date': new Date(payment.createdAt).toLocaleDateString()
+          }))
+        },
+        type: 'payments'
+      }
+    }
+
     return {
       success: false,
-      error: 'Failed to export data'
+      error: 'Invalid data type specified'
+    }
+  } catch (error) {
+    console.error('Error preparing export data:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to prepare export data'
     }
   }
 }
-
 export async function backupDatabase() {
   try {
     // Simulate backup process
