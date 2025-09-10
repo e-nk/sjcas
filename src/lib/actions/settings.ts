@@ -13,25 +13,66 @@ export type SchoolSettings = {
   defaultCurrency: string
 }
 
+// Default settings
+const DEFAULT_SETTINGS: SchoolSettings = {
+  schoolName: "ST. JOSEPH'S CENTRAL ACADEMY - SIRONOI",
+  schoolAddress: "P.O. Box 123, Sironoi, Kenya",
+  schoolPhone: "+254712345678",
+  schoolEmail: "info@stjoseph.ac.ke",
+  paybillNumber: "174379",
+  currentAcademicYear: new Date().getFullYear(),
+  defaultCurrency: "KES"
+}
+
+// Get school settings from database
 export async function getSchoolSettings(): Promise<SchoolSettings> {
-  // For now, return default settings
-  // In a real implementation, you might store these in a settings table
-  return {
-    schoolName: "ST. JOSEPH'S CENTRAL ACADEMY - SIRONOI",
-    schoolAddress: "P.O. Box 123, Sironoi, Kenya",
-    schoolPhone: "+254712345678",
-    schoolEmail: "info@stjoseph.ac.ke",
-    paybillNumber: "123456",
-    currentAcademicYear: 2024,
-    defaultCurrency: "KES"
+  try {
+    const settings = await db.setting.findMany()
+    
+    if (settings.length === 0) {
+      // Initialize with default settings
+      await initializeDefaultSettings()
+      return DEFAULT_SETTINGS
+    }
+
+    // Convert database settings to SchoolSettings object
+    const settingsObject: any = {}
+    settings.forEach(setting => {
+      if (setting.key === 'currentAcademicYear') {
+        settingsObject[setting.key] = parseInt(setting.value)
+      } else {
+        settingsObject[setting.key] = setting.value
+      }
+    })
+
+    // Merge with defaults for any missing settings
+    return { ...DEFAULT_SETTINGS, ...settingsObject }
+  } catch (error) {
+    console.error('Error getting school settings:', error)
+    return DEFAULT_SETTINGS
   }
 }
 
+// Initialize default settings in database
+async function initializeDefaultSettings() {
+  try {
+    const settingsToCreate = Object.entries(DEFAULT_SETTINGS).map(([key, value]) => ({
+      key,
+      value: value.toString()
+    }))
+
+    await db.setting.createMany({
+      data: settingsToCreate,
+      skipDuplicates: true
+    })
+  } catch (error) {
+    console.error('Error initializing default settings:', error)
+  }
+}
+
+// Update school settings
 export async function updateSchoolSettings(formData: FormData) {
   try {
-    // In a real implementation, you would save to database
-    // For now, we'll just simulate the update
-    
     const settings = {
       schoolName: formData.get('schoolName') as string,
       schoolAddress: formData.get('schoolAddress') as string,
@@ -42,20 +83,67 @@ export async function updateSchoolSettings(formData: FormData) {
       defaultCurrency: formData.get('defaultCurrency') as string,
     }
 
-    // TODO: Save to database settings table
-    console.log('Settings would be saved:', settings)
+    // Validate required fields
+    if (!settings.schoolName || !settings.schoolAddress || !settings.schoolPhone || !settings.schoolEmail) {
+      throw new Error('All required fields must be filled')
+    }
+
+    // Update each setting in database
+    for (const [key, value] of Object.entries(settings)) {
+      await db.setting.upsert({
+        where: { key },
+        update: { value: value.toString() },
+        create: { 
+          key, 
+          value: value.toString() 
+        }
+      })
+    }
+
+    console.log('✅ Settings saved successfully:', settings)
 
     revalidatePath('/settings')
+    
     return { 
       success: true, 
       message: 'Settings updated successfully!' 
     }
   } catch (error) {
-    console.error('Error updating settings:', error)
+    console.error('❌ Error updating settings:', error)
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to update settings' 
     }
+  }
+}
+
+// Get individual setting
+export async function getSetting(key: string): Promise<string | null> {
+  try {
+    const setting = await db.setting.findUnique({
+      where: { key }
+    })
+    return setting?.value || null
+  } catch (error) {
+    console.error('Error getting setting:', error)
+    return null
+  }
+}
+
+// Update individual setting
+export async function updateSetting(key: string, value: string) {
+  try {
+    await db.setting.upsert({
+      where: { key },
+      update: { value },
+      create: { key, value }
+    })
+    
+    revalidatePath('/settings')
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating setting:', error)
+    return { success: false, error: 'Failed to update setting' }
   }
 }
 
