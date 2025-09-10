@@ -6,6 +6,16 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { Suspense } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
+import BulkUpload from '@/components/students/BulkUpload'
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/tabs'
+import { getClasses } from '@/lib/actions/classes'
+import { getFeeGroups } from '@/lib/actions/fee-groups'
+
 
 function StudentsLoading() {
   return (
@@ -46,8 +56,39 @@ function StudentsLoading() {
 }
 
 async function StudentsContent() {
-  const students = await getStudents()
-  return <StudentsTable students={students} />
+  const [students, classes, feeGroups] = await Promise.all([
+    getStudents(),
+    getClasses(),
+    getFeeGroups(),
+  ])
+
+  return (
+    <Tabs defaultValue="all" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="all">All Students</TabsTrigger>
+        <TabsTrigger value="active">Active</TabsTrigger>
+        <TabsTrigger value="inactive">Inactive</TabsTrigger>
+        <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="all">
+        <StudentsTable students={students} />
+      </TabsContent>
+
+      {/* Optional: Filtered versions of the StudentsTable */}
+      <TabsContent value="active">
+        <StudentsTable students={students.filter(s => s.status === 'ACTIVE')} />
+      </TabsContent>
+
+      <TabsContent value="inactive">
+        <StudentsTable students={students.filter(s => s.status !== 'ACTIVE')} />
+      </TabsContent>
+
+      <TabsContent value="bulk-upload">
+        <BulkUpload classes={classes} feeGroups={feeGroups} />
+      </TabsContent>
+    </Tabs>
+  )
 }
 
 export default async function StudentsPage() {
